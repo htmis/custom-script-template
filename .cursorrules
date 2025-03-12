@@ -1,0 +1,19 @@
+# Directory Structure
+.
+├── .gitignore
+├── .cursorrules
+├── CONTRIBUTING.md
+├── LICENSE
+├── README.md
+├── custom_script.sh
+├── simple_script.sh
+└── tests/
+    ├── Dockerfile
+    ├── README.md
+    ├── conftest.py
+    ├── container_management.sh
+    ├── run_tests.sh
+    ├── test_config.sh
+    ├── test_coverage.sh
+    ├── test_custom_script.py
+    └── test_utils_combined.sh 

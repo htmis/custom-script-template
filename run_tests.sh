@@ -234,17 +234,6 @@ setup_environment() {
     if [ $retry -eq 5 ]; then
       echo "Failed to copy SSH key after 5 attempts, using a locally generated key instead"
       ssh-keygen -t rsa -f /tmp/test-ssh-keys/id_rsa -N ""
-      
-      # Copy the public key to the container's authorized_keys
-      ssh-keygen -y -f /tmp/test-ssh-keys/id_rsa > /tmp/test-ssh-keys/id_rsa.pub
-      docker cp /tmp/test-ssh-keys/id_rsa.pub "test-ssh-container:/tmp/local_key.pub"
-      docker exec test-ssh-container bash -c "
-        mkdir -p /home/$TEST_ACCOUNT/.ssh
-        chmod 700 /home/$TEST_ACCOUNT/.ssh
-        cat /tmp/local_key.pub > /home/$TEST_ACCOUNT/.ssh/authorized_keys
-        chown -R $TEST_ACCOUNT:$TEST_ACCOUNT /home/$TEST_ACCOUNT/.ssh
-        chmod 600 /home/$TEST_ACCOUNT/.ssh/authorized_keys
-      "
     else
       sleep 2
     fi
@@ -259,77 +248,83 @@ Host 127.0.0.1
     UserKnownHostsFile /dev/null
     User $TEST_ACCOUNT
     IdentityFile /tmp/test-ssh-keys/id_rsa
+    Port 2222
 EOF
-
-  # Copy the script files to the container
-  echo "Copying script files to container..."
-  docker cp "$SCRIPT_DIR/../simple_script.sh" "test-ssh-container:/home/$TEST_ACCOUNT/simple_script.sh"
-  docker cp "$SCRIPT_DIR/../custom_script.sh" "test-ssh-container:/home/$TEST_ACCOUNT/custom_script.sh"
   
-  # Set permissions on the script files
-  echo "Setting permissions on script files..."
-  docker exec test-ssh-container bash -c "
-    chmod +x /home/$TEST_ACCOUNT/simple_script.sh
-    chmod +x /home/$TEST_ACCOUNT/custom_script.sh
-    chown root /home/$TEST_ACCOUNT/simple_script.sh
-    chown root /home/$TEST_ACCOUNT/custom_script.sh
-  "
+  # Copy script files to the container
+  echo "Copying script files to the container..."
+  PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+  docker cp "$PARENT_DIR/simple_script.sh" "test-ssh-container:/home/$TEST_ACCOUNT/simple_script.sh"
+  docker cp "$PARENT_DIR/custom_script.sh" "test-ssh-container:/home/$TEST_ACCOUNT/custom_script.sh"
+  docker exec test-ssh-container chmod +x "/home/$TEST_ACCOUNT/simple_script.sh" "/home/$TEST_ACCOUNT/custom_script.sh"
+  docker exec test-ssh-container chown "$TEST_ACCOUNT:$TEST_ACCOUNT" "/home/$TEST_ACCOUNT/simple_script.sh" "/home/$TEST_ACCOUNT/custom_script.sh"
   
   # Test SSH connection
   echo "Testing SSH connection..."
-  ssh -i /tmp/test-ssh-keys/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 $TEST_ACCOUNT@localhost "echo SSH connection successful" || {
-    echo "SSH connection failed, attempting to fix permissions..."
+  ssh -i /tmp/test-ssh-keys/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 "$TEST_ACCOUNT@localhost" "echo SSH connection successful" || {
+    echo "SSH connection failed. Trying to fix..."
+    
+    # Fix SSH permissions in container
     docker exec test-ssh-container bash -c "
+      mkdir -p /home/$TEST_ACCOUNT/.ssh
       chmod 700 /home/$TEST_ACCOUNT/.ssh
-      chmod 600 /home/$TEST_ACCOUNT/.ssh/authorized_keys
-      chmod 600 /home/$TEST_ACCOUNT/.ssh/id_rsa
+      cp /tmp/user_ssh_key.pub /home/$TEST_ACCOUNT/.ssh/authorized_keys
       chown -R $TEST_ACCOUNT:$TEST_ACCOUNT /home/$TEST_ACCOUNT/.ssh
-      ls -la /home/$TEST_ACCOUNT/.ssh
-      cat /home/$TEST_ACCOUNT/.ssh/authorized_keys
+      chmod 600 /home/$TEST_ACCOUNT/.ssh/authorized_keys
     "
-    # Try again
-    ssh -i /tmp/test-ssh-keys/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 $TEST_ACCOUNT@localhost "echo SSH connection successful" || {
-      echo "SSH connection still failed, but continuing anyway..."
-    }
+    
+    # Test again
+    if ssh -i /tmp/test-ssh-keys/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 "$TEST_ACCOUNT@localhost" "echo SSH connection successful"; then
+      echo "SSH connection fixed and working."
+    else
+      echo "SSH connection still failing. Tests may not work correctly."
+    fi
   }
-  
-  # Set environment variable for tests
-  export SSH_CONFIG_FILE="/tmp/test-ssh-keys/config"
   
   echo "Test environment setup complete."
 }
 
-# Set up test environment
+# Set up the test environment
 setup_environment
 
-# Exit if setup only
+# Exit if only setting up
 if [ "$SETUP_ONLY" = true ]; then
-  echo "Test environment setup complete."
+  echo "Setup complete. Exiting without running tests."
   exit 0
 fi
 
-# Run tests with coverage if requested
+# Run the tests
+echo "Running tests..."
+
+# Set up Python environment
+echo "Setting up Python environment..."
+if [ -d venv ]; then
+  echo "Using existing virtual environment"
+  source venv/bin/activate
+else
+  echo "Creating virtual environment"
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install --upgrade pip
+  pip install -r requirements.txt
+fi
+
+# Install docker package if not already installed
+if ! python -c "import docker" &>/dev/null; then
+  echo "Installing docker package..."
+  pip install docker
+fi
+
+# Run tests with or without coverage
 if [ "$COVERAGE" = true ]; then
   echo "Running tests with coverage..."
-  
-  # Source the coverage utilities
-  source "$SCRIPT_DIR/test_coverage.sh"
-  
-  # Set environment variable for shell coverage
-  export SHELL_COVERAGE=true
-  
-  # Run tests with coverage
   if [ "$VERBOSE" = true ]; then
-    python -m pytest -v
+    python -m pytest -v --cov=../custom_script.sh --cov-report=term-missing
   else
-    python -m pytest
+    python -m pytest --cov=../custom_script.sh --cov-report=term-missing
   fi
-  
-  # Generate coverage report
-  generate_report
 else
-  # Run tests normally
-  echo "Running tests..."
+  echo "Running tests without coverage..."
   if [ "$VERBOSE" = true ]; then
     python -m pytest -v
   else
@@ -337,14 +332,4 @@ else
   fi
 fi
 
-# Clean up unless --no-cleanup was specified
-if [ "$NO_CLEANUP" = false ]; then
-  # Only change to tests directory if not already there
-  if [[ "$(basename "$(pwd)")" != "tests" ]]; then
-    cd tests
-  fi
-  cleanup_environment
-fi
-
-echo "Tests completed."
-exit 0 
+echo "Tests completed." 

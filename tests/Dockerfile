@@ -25,11 +25,6 @@ RUN mkdir -p /var/run/sshd && \
     echo "SyslogFacility AUTH" >> /etc/ssh/sshd_config && \
     ssh-keygen -A
 
-# Create research directories
-RUN mkdir -p /research/qhs && \
-    mkdir -p /research/labs && \
-    chmod -R 755 /research
-
 # Copy test configuration
 COPY test_config.sh /test_config.sh
 RUN chmod +x /test_config.sh

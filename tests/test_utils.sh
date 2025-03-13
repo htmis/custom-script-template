@@ -1,13 +1,13 @@
 #!/bin/bash
-# Combined Test Utilities
-# This script combines functionality from:
-# - test_utils.sh: General test utilities
-# - create_test_users.sh: User creation
-# - copy_ssh_key.sh: SSH key management
+# Test Utilities
+# This script provides utilities for:
+# - User management
+# - SSH key management
+# - Container interaction
 #
 # Usage:
-#   source test_utils_combined.sh
-#   Or run directly for help: ./test_utils_combined.sh
+#   source test_utils.sh
+#   Or run directly for help: ./test_utils.sh
 
 # Source the test configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -163,10 +163,6 @@ cleanup_env_vars() {
   # Unset test configuration variables
   unset TEST_ACCOUNT
   unset TEST_GROUP
-  unset RESEARCH_QHS_DIR
-  unset RESEARCH_LABS_DIR
-  unset FSLUSTRE_QHS_DIR
-  unset FSLUSTRE_LABS_DIR
   
   # Unset function exports
   if declare -F | grep -q "run_with_coverage"; then
@@ -190,8 +186,8 @@ cleanup_env_vars() {
 
 # Function to show help
 show_help() {
-  echo "Combined Test Utilities"
-  echo "======================"
+  echo "Test Utilities"
+  echo "=============="
   echo ""
   echo "This script provides utility functions for working with the test environment."
   echo ""
@@ -208,12 +204,12 @@ show_help() {
   echo "  cleanup_env_vars        - Clean up environment variables"
   echo ""
   echo "Usage:"
-  echo "  source test_utils_combined.sh"
+  echo "  source test_utils.sh"
   echo "  create_local_test_user"
   echo "  copy_ssh_key ~/.ssh/id_rsa.pub"
   echo "  connect_ssh"
   echo "  check_status"
-  echo "  run_in_container ls -la /research"
+  echo "  run_in_container ls -la /home"
   echo "  copy_file local_file.txt container:/tmp/"
   echo "  copy_file container:/etc/passwd local_passwd.txt"
   echo "  setup_test_environment [ssh_key_path]"
@@ -229,7 +225,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     "$@"
   fi
 else
-  echo "Combined test utilities loaded. Use 'show_help' to see available functions."
+  echo "Test utilities loaded. Use 'show_help' to see available functions."
 fi
 
 # Export functions for use in other scripts

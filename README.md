@@ -84,7 +84,9 @@ Delete a file:
 
 The template includes a comprehensive testing framework using pytest and Docker. This allows you to test your scripts in an isolated environment without affecting your host system.
 
-To run the tests:
+### Running the Main Tests
+
+To run the main tests:
 
 ```bash
 cd tests
@@ -97,7 +99,30 @@ Available options for the test runner:
 ./run_tests.sh [--setup-only] [--no-cleanup] [--rebuild] [--coverage]
 ```
 
-For more information about testing, see the [tests/README.md](tests/README.md) file.
+### Testing Utilities
+
+The template also includes utilities for testing in a Docker container environment:
+
+- **test_utils.sh**: Utilities for user management, SSH key management, and container interaction
+- **test_utils_test.sh**: Test script for testing the utilities in `test_utils.sh`
+
+To test these utilities:
+
+```bash
+cd tests
+./test_utils_test.sh
+```
+
+This will test:
+- SSH key management
+- Container status checking
+- Test environment setup
+- Container command execution
+- File copying to and from the container
+
+For more information about testing, see:
+- [tests/README.md](tests/README.md) - General testing information
+- [tests/README_test_utils.md](tests/README_test_utils.md) - Information about test utilities
 
 ## Customization Guide
 

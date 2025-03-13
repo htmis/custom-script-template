@@ -3,16 +3,10 @@
 # This file defines the test users, groups, and directories used in tests
 
 # Test account name - used across all test scripts
-export TEST_ACCOUNT="ext_lastname_firstname_domain_com"
+export TEST_ACCOUNT="testuser"
 
 # Test groups
 export TEST_GROUP="mcc_live_hpc_posix_stats_inform"
-
-# Test directories
-export RESEARCH_QHS_DIR="/research/qhs"
-export RESEARCH_LABS_DIR="/research/labs"
-export FSLUSTRE_QHS_DIR="/fslustre/qhs"
-export FSLUSTRE_LABS_DIR="/fslustre/labs"
 
 # Function to create test user on host system
 create_test_user() {
@@ -48,23 +42,12 @@ create_test_directories() {
     local username="${1:-$TEST_ACCOUNT}"
     echo "Creating test directories for: $username"
     
-    # Create directories
-    mkdir -p "$RESEARCH_QHS_DIR/$username"
-    mkdir -p "$RESEARCH_LABS_DIR/$username"
-    mkdir -p "$FSLUSTRE_QHS_DIR/$username"
-    mkdir -p "$FSLUSTRE_LABS_DIR/$username"
-    
-    # Set ownership
-    chown "$username:$TEST_GROUP" "$RESEARCH_QHS_DIR/$username"
-    chown "$username:$username" "$RESEARCH_LABS_DIR/$username"
-    chown "$username:$username" "$FSLUSTRE_QHS_DIR/$username"
-    chown "$username:$username" "$FSLUSTRE_LABS_DIR/$username"
-    
-    # Set permissions
-    chmod 750 "$RESEARCH_QHS_DIR/$username"
-    chmod 750 "$RESEARCH_LABS_DIR/$username"
-    chmod 750 "$FSLUSTRE_QHS_DIR/$username"
-    chmod 750 "$FSLUSTRE_LABS_DIR/$username"
+    # Create user's home directory if it doesn't exist
+    if [ ! -d "/home/$username" ]; then
+        mkdir -p "/home/$username"
+        chown "$username:$username" "/home/$username"
+        chmod 750 "/home/$username"
+    fi
     
     echo "Test directories created."
 }

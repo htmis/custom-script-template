@@ -142,16 +142,6 @@ perform_healthcheck() {
   fi
   echo "Port 22 is listening"
 
-  # Check if research directories exist
-  echo "Checking research directories..."
-  if [ ! -d "/research/qhs" ] || [ ! -d "/research/labs" ]; then
-    echo "Research directories not found, creating them..."
-    mkdir -p /research/qhs
-    mkdir -p /research/labs
-    chmod -R 755 /research
-  fi
-  echo "Research directories found"
-
   # Basic SSH test - skip if it fails
   echo "Testing SSH connection..."
   if [ -n "$TEST_ACCOUNT" ]; then

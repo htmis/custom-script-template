@@ -53,7 +53,7 @@ def test_file_creation_in_container(ssh_server, run_remote_command):
     
     # Run the simple script to create the file
     # The script is in the home directory of the user in the container
-    cmd = f"./simple_script.sh --filename {test_filename} create"
+    cmd = f"/home/testuser/simple_script.sh --filename {test_filename} create"
     result = run_remote_command(cmd)
     
     # Verify file was created
